@@ -13,12 +13,23 @@ class AuthController extends Controller
 {
     public function login(Request $request)
     {
+
         $request->validate([
-            'email' => 'required|email',
+            'email' => 'nullable|email',
+            'login' => 'nullable|string',
             'password' => 'required',
         ]);
 
-        $user = User::where('email', $request->email)->first();
+        $loginInput = $request->input('email') ?? $request->input('login');
+        if (! $loginInput) {
+            throw ValidationException::withMessages([
+                'email' => ['Please provide email or username.'],
+            ]);
+        }
+
+        $field = filter_var($loginInput, FILTER_VALIDATE_EMAIL) ? 'email' : 'name';
+
+        $user = User::where($field, $loginInput)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
