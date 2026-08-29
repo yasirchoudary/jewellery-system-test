@@ -39,17 +39,18 @@
 
             <form @submit.prevent="login">
                 <div class="form-group">
-                    <label for="email">{{ $t('login.username') }}</label>
+                    <label for="login">{{ $t('login.username') }}</label>
                     <div class="input-wrap">
                         <span class="input-icon"
                             ><i class="fas fa-user"></i
                         ></span>
                         <input
-                            id="email"
-                            v-model="form.email"
-                            type="email"
+                            id="login"
+                            v-model="form.login"
+                            type="text"
                             required
                             autocomplete="username"
+                            placeholder="Email or Username"
                         />
                     </div>
                 </div>
@@ -90,10 +91,10 @@ import { i18nState, setLocale } from "../i18n";
 
 export default {
     name: "Login",
-    data() {
+            data() {
         return {
             form: {
-                email: "",
+                login: "",
                 password: ""
             },
             loading: false,
@@ -130,6 +131,7 @@ export default {
                 .catch(err => {
                     this.error =
                         err.response?.data?.message ||
+                        err.response?.data?.errors?.login?.[0] ||
                         err.response?.data?.errors?.email?.[0] ||
                         "Login failed. Please check your credentials.";
                 })

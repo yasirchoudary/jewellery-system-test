@@ -15,7 +15,8 @@ class AuthController extends Controller
     {
 
         $request->validate([
-            'email' => 'nullable|email',
+            // accept either an email or a username string in either field
+            'email' => 'nullable|string',
             'login' => 'nullable|string',
             'password' => 'required',
         ]);
