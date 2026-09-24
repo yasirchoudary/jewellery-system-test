@@ -133,27 +133,44 @@ class InwardController extends Controller
 
             $mst_id = $inward_mst->inward_mst_id;
 
+            $gross = (float) $request->input('grossWeight', $weightGrams);
+            $stone = (float) $request->input('stoneWeight', 0);
+            $purity = $request->input('purityKarat', '22K');
+            $tagNumber = $request->input('tagNumber');
+
+            $calc = app(\App\Services\JewelleryCalculationService::class);
+            $weights = $calc->decomposeWeights($gross, $stone, $purity);
+
             $inward_detail = new tbl_inward_details();
             $inward_detail->sell_quality_id = $itemTypeId;
             $inward_detail->metal_type = $metalType;
-            $inward_detail->weight_grams = $weightGrams;
+            $inward_detail->weight_grams = $weights['net_weight'];
+            $inward_detail->gross_weight = $weights['gross_weight'];
+            $inward_detail->stone_weight = $weights['stone_weight'];
+            $inward_detail->net_weight = $weights['net_weight'];
+            $inward_detail->purity_karat = $weights['purity_karat'];
+            $inward_detail->fine_weight = $weights['fine_weight'];
             $inward_detail->qty = $quantity;
             $inward_detail->qty_unit = $unit;
             $inward_detail->rate = $rate;
             $inward_detail->inward_mst_id = $mst_id;
             $inward_detail->save();
 
-            $purchaseAmount = round($weightGrams * $rate, 2);
+            $purchaseAmount = round($weights['net_weight'] * $rate, 2);
             $this->stockService->addPurchase(
                 $metalType,
                 $itemTypeId,
-                $weightGrams,
+                $weights['net_weight'],
                 (int) $quantity,
                 (float) $rate,
                 $purchaseAmount,
                 'purchase',
                 $inward_detail->inward_details_id,
-                optional($request->user())->id
+                optional($request->user())->id,
+                $weights['gross_weight'],
+                $weights['stone_weight'],
+                $weights['purity_karat'],
+                $tagNumber
             );
 
             DB::commit();

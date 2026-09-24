@@ -9,4 +9,6 @@ class tbl_sell_quality_category extends Model
 {
     use HasFactory;
     protected $table = 'tbl_sell_quality_categories';
+    protected $primaryKey = 'sell_quality_category_id';
+    protected $guarded = [];
 }

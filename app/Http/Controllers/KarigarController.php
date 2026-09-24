@@ -265,6 +265,10 @@ class KarigarController extends Controller
                 'wastage_grams' => (float) $request->input('wastageGrams', 0),
                 'mazduri_cost' => (float) $request->input('mazduriCost', 0),
                 'item_description' => $request->input('itemDescription'),
+                'gross_weight' => (float) $request->input('grossWeight', $request->input('returnedWeightGrams')),
+                'stone_weight' => (float) $request->input('stoneWeight', 0),
+                'purity_karat' => (float) $request->input('purityKarat', 22.0),
+                'tag_number' => $request->input('tagNumber'),
                 'notes' => $request->input('notes'),
             ], optional($request->user())->id);
 

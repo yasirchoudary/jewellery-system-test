@@ -336,6 +336,11 @@ class InvoiceController extends Controller
                 $lineGst = round($baseAmount * ($gstPercentage / 100), 2);
                 $lineSold = round($baseAmount + $lineGst, 2);
 
+                $grossW = (float) ($line['grossWeight'] ?? $line['lineWeight']);
+                $stoneW = (float) ($line['stoneWeight'] ?? 0);
+                $purityK = (float) ($line['purityKarat'] ?? 22.0);
+                $tagNo = $line['tagNumber'] ?? null;
+
                 $saleSummary = $this->stockService->recordSale(
                     $metalType,
                     $line['qualityId'],
@@ -344,12 +349,19 @@ class InvoiceController extends Controller
                     $lineSold,
                     'sale_challan',
                     (int) $invoiceId,
-                    optional($request->user())->id
+                    optional($request->user())->id,
+                    $grossW,
+                    $stoneW,
+                    $purityK,
+                    $tagNo
                 );
 
                 $lineProfit = round($saleSummary['profit_amount'], 2);
                 $totalCost += $saleSummary['cost_amount'];
                 $totalLineProfit += $lineProfit;
+
+                $calc = app(\App\Services\JewelleryCalculationService::class);
+                $wDecomp = $calc->decomposeWeights($grossW, $stoneW, $purityK);
 
                 $detailRows[] = [
                     'invoice_mst_id' => (int) $invoiceId,
@@ -358,6 +370,12 @@ class InvoiceController extends Controller
                     'qty' => $line['qty'],
                     'qty_unit' => $line['unit'],
                     'weight_grams' => $line['lineWeight'],
+                    'gross_weight' => $wDecomp['gross_weight'],
+                    'stone_weight' => $wDecomp['stone_weight'],
+                    'net_weight' => $wDecomp['net_weight'],
+                    'purity_karat' => $wDecomp['purity_karat'],
+                    'fine_weight' => $wDecomp['fine_weight'],
+                    'tag_number' => $tagNo,
                     'rate' => $line['rate'],
                     'base_amount' => $baseAmount,
                     'gst_percentage' => $gstPercentage,
@@ -894,6 +912,11 @@ class InvoiceController extends Controller
                 $lineGst = round($item['baseAmount'] * ($gstPercentage / 100), 2);
                 $lineSold = round($item['baseAmount'] + $lineGst, 2);
 
+                $grossW = (float) ($item['grossWeight'] ?? $item['lineWeight']);
+                $stoneW = (float) ($item['stoneWeight'] ?? 0);
+                $purityK = (float) ($item['purityKarat'] ?? 22.0);
+                $tagNo = $item['tagNumber'] ?? null;
+
                 $saleSummary = $this->stockService->recordSale(
                     $metalType,
                     $item['qualityId'],
@@ -902,12 +925,19 @@ class InvoiceController extends Controller
                     $lineSold,
                     'sale',
                     $challanMst->challan_mst_id,
-                    optional($req->user())->id
+                    optional($req->user())->id,
+                    $grossW,
+                    $stoneW,
+                    $purityK,
+                    $tagNo
                 );
 
                 $lineProfit = round($saleSummary['profit_amount'], 2);
                 $totalCost += $saleSummary['cost_amount'];
                 $totalLineProfit += $lineProfit;
+
+                $calc = app(\App\Services\JewelleryCalculationService::class);
+                $wDecomp = $calc->decomposeWeights($grossW, $stoneW, $purityK);
 
                 $detailRows[] = [
                     'invoice_mst_id' => $challanMst->challan_mst_id,
@@ -916,6 +946,12 @@ class InvoiceController extends Controller
                     'qty' => $item['qty'],
                     'qty_unit' => $item['unit'],
                     'weight_grams' => $item['lineWeight'],
+                    'gross_weight' => $wDecomp['gross_weight'],
+                    'stone_weight' => $wDecomp['stone_weight'],
+                    'net_weight' => $wDecomp['net_weight'],
+                    'purity_karat' => $wDecomp['purity_karat'],
+                    'fine_weight' => $wDecomp['fine_weight'],
+                    'tag_number' => $tagNo,
                     'rate' => $item['rate'],
                     'base_amount' => $item['baseAmount'],
                     'gst_percentage' => $gstPercentage,

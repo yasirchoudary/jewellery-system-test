@@ -6,11 +6,20 @@ use App\Models\tbl_karigar_job;
 use App\Models\tbl_metal_balance;
 use App\Models\tbl_sell_quality;
 use App\Models\tbl_stock_ledger;
+use App\Services\JewelleryCalculationService;
+use App\Models\tbl_inventory_tag;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class StockService
 {
+    protected JewelleryCalculationService $calcService;
+
+    public function __construct(?JewelleryCalculationService $calcService = null)
+    {
+        $this->calcService = $calcService ?: app(JewelleryCalculationService::class);
+    }
+
     public function getBalance(string $metalType): tbl_metal_balance
     {
         return tbl_metal_balance::firstOrCreate(
@@ -219,11 +228,18 @@ class StockService
         float $amount,
         string $referenceType,
         int $referenceId,
-        ?int $userId = null
+        ?int $userId = null,
+        float $grossWeight = 0.0,
+        float $stoneWeight = 0.0,
+        float $purityKarat = 22.0,
+        ?string $tagNumber = null
     ): tbl_stock_ledger {
         if ($weightGrams <= 0) {
             throw new RuntimeException('Purchase weight must be greater than zero.');
         }
+
+        $gross = $grossWeight > 0 ? $grossWeight : $weightGrams;
+        $weights = $this->calcService->decomposeWeights($gross, $stoneWeight, $purityKarat);
 
         return DB::transaction(function () use (
             $metalType,
@@ -234,17 +250,26 @@ class StockService
             $amount,
             $referenceType,
             $referenceId,
-            $userId
+            $userId,
+            $weights,
+            $tagNumber
         ) {
             $balance = $this->getBalance($metalType);
             $balance->total_weight_grams = round((float) $balance->total_weight_grams + $weightGrams, 3);
             $balance->total_pieces = (int) $balance->total_pieces + $pieces;
             $balance->save();
 
-            return tbl_stock_ledger::create([
+            $ledger = tbl_stock_ledger::create([
                 'metal_type' => $metalType,
                 'sell_quality_id' => $sellQualityId,
                 'transaction_type' => 'purchase',
+                'direction' => 'in',
+                'gross_weight' => $weights['gross_weight'],
+                'stone_weight' => $weights['stone_weight'],
+                'net_weight' => $weights['net_weight'],
+                'purity_karat' => $weights['purity_karat'],
+                'fine_weight' => $weights['fine_weight'],
+                'tag_number' => $tagNumber,
                 'weight_grams' => $weightGrams,
                 'quantity_pieces' => $pieces,
                 'rate_per_gram' => $ratePerGram,
@@ -254,6 +279,31 @@ class StockService
                 'reference_id' => $referenceId,
                 'created_by' => $userId,
             ]);
+
+            if ($tagNumber && $sellQualityId) {
+                tbl_inventory_tag::updateOrCreate(
+                    ['tag_number' => $tagNumber],
+                    [
+                        'barcode' => $tagNumber,
+                        'sell_quality_id' => $sellQualityId,
+                        'metal_type' => $metalType,
+                        'gross_weight' => $weights['gross_weight'],
+                        'stone_weight' => $weights['stone_weight'],
+                        'net_weight' => $weights['net_weight'],
+                        'purity_karat' => $weights['purity_karat'],
+                        'fine_weight' => $weights['fine_weight'],
+                        'pieces' => $pieces,
+                        'cost_rate' => $ratePerGram,
+                        'cost_amount' => $amount,
+                        'status' => 'in_stock',
+                        'source_type' => $referenceType,
+                        'source_id' => $referenceId,
+                        'created_by' => $userId,
+                    ]
+                );
+            }
+
+            return $ledger;
         });
     }
 
@@ -323,11 +373,18 @@ class StockService
         float $soldAmount,
         string $referenceType,
         int $referenceId,
-        ?int $userId = null
+        ?int $userId = null,
+        float $grossWeight = 0.0,
+        float $stoneWeight = 0.0,
+        float $purityKarat = 22.0,
+        ?string $tagNumber = null
     ): array {
         if ($weightGrams <= 0) {
             throw new RuntimeException('Sale weight must be greater than zero.');
         }
+
+        $gross = $grossWeight > 0 ? $grossWeight : $weightGrams;
+        $weights = $this->calcService->decomposeWeights($gross, $stoneWeight, $purityKarat);
 
         return DB::transaction(function () use (
             $metalType,
@@ -337,7 +394,9 @@ class StockService
             $soldAmount,
             $referenceType,
             $referenceId,
-            $userId
+            $userId,
+            $weights,
+            $tagNumber
         ) {
             $this->assertQualityStockAvailable($sellQualityId, $weightGrams, $pieces);
 
@@ -363,6 +422,13 @@ class StockService
                 'metal_type' => $metalType,
                 'sell_quality_id' => $sellQualityId,
                 'transaction_type' => 'sale',
+                'direction' => 'out',
+                'gross_weight' => $weights['gross_weight'],
+                'stone_weight' => $weights['stone_weight'],
+                'net_weight' => $weights['net_weight'],
+                'purity_karat' => $weights['purity_karat'],
+                'fine_weight' => $weights['fine_weight'],
+                'tag_number' => $tagNumber,
                 'weight_grams' => $weightGrams,
                 'quantity_pieces' => $pieces,
                 'rate_per_gram' => $weightGrams > 0 ? round($soldAmount / $weightGrams, 2) : 0,
@@ -373,6 +439,13 @@ class StockService
                 'created_by' => $userId,
                 'notes' => 'Cost: ' . $costAmount . ', Profit: ' . $profitAmount,
             ]);
+
+            if ($tagNumber) {
+                tbl_inventory_tag::where('tag_number', $tagNumber)->update([
+                    'status' => 'sold',
+                    'sold_invoice_id' => $referenceId,
+                ]);
+            }
 
             return [
                 'cost_amount' => $costAmount,
@@ -552,6 +625,12 @@ class StockService
                 'metal_type' => $metalType,
                 'sell_quality_id' => $sellQualityId,
                 'transaction_type' => 'adjustment',
+                'direction' => 'out',
+                'gross_weight' => $weightGrams,
+                'stone_weight' => 0,
+                'net_weight' => $weightGrams,
+                'purity_karat' => 22.0,
+                'fine_weight' => round($weightGrams * (22.0 / 24.0), 3),
                 'weight_grams' => $weightGrams,
                 'quantity_pieces' => $pieces,
                 'rate_per_gram' => $avgRate,
@@ -583,7 +662,11 @@ class StockService
         int $pieces,
         int $referenceId,
         ?int $userId = null,
-        ?string $notes = null
+        ?string $notes = null,
+        float $grossWeight = 0.0,
+        float $stoneWeight = 0.0,
+        float $purityKarat = 22.0,
+        ?string $tagNumber = null
     ): tbl_stock_ledger {
         $avgRate = $this->getAverageRate($metalType);
         $amount = round($weightGrams * $avgRate, 2);
@@ -597,7 +680,11 @@ class StockService
             $amount,
             'karigar_return',
             $referenceId,
-            $userId
+            $userId,
+            $grossWeight,
+            $stoneWeight,
+            $purityKarat,
+            $tagNumber
         );
     }
 

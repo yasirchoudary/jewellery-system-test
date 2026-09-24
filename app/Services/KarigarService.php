@@ -143,6 +143,11 @@ class KarigarService
             $job->notes = $data['notes'] ?? $job->notes;
             $job->save();
 
+            $grossW = (float) ($data['gross_weight'] ?? $returnedWeight);
+            $stoneW = (float) ($data['stone_weight'] ?? 0);
+            $purityK = (float) ($data['purity_karat'] ?? 22.0);
+            $tagNo = $data['tag_number'] ?? null;
+
             $this->stockService->returnMetalFromKarigar(
                 $job->metal_type,
                 $sellQualityId,
@@ -150,7 +155,11 @@ class KarigarService
                 max(1, $pieces),
                 (int) $job->karigar_job_id,
                 $userId,
-                'Karigar inward #' . $job->karigar_job_id
+                'Karigar inward #' . $job->karigar_job_id,
+                $grossW,
+                $stoneW,
+                $purityK,
+                $tagNo
             );
 
             return $job->fresh(['karigar', 'quality']);

@@ -10,6 +10,7 @@ class tbl_customer extends Model
     use HasFactory;
 
     protected $primaryKey = "customer_id";
+    protected $guarded = [];
 
     public function setCustomerCompanyNameAttribute($value){
         $value = preg_replace('/\s+/', ' ', $value);

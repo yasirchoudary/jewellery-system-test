@@ -327,12 +327,21 @@ class ChallanController extends Controller
                     ]);
                 }
 
+                $grossW = (float) ($item['grossWeight'] ?? $lineWeight);
+                $stoneW = (float) ($item['stoneWeight'] ?? 0);
+                $purityK = $item['purityKarat'] ?? '22K';
+                $tagNo = $item['tagNumber'] ?? null;
+
                 $normalizedItems[] = [
                     'categoryId' => (int) $item['categoryId'],
                     'qualityId' => (int) $item['qualityId'],
                     'qty' => $qty,
                     'unit' => $item['unit'],
                     'lineWeight' => $lineWeight,
+                    'grossWeight' => $grossW,
+                    'stoneWeight' => $stoneW,
+                    'purityKarat' => $purityK,
+                    'tagNumber' => $tagNo,
                 ];
                 $totalWeightGrams += $lineWeight;
                 $totalQty += $qty;
@@ -340,6 +349,8 @@ class ChallanController extends Controller
 
             $first = $normalizedItems[0];
             $totalWeightGrams = round($totalWeightGrams, 3);
+
+            $calc = app(\App\Services\JewelleryCalculationService::class);
 
             DB::beginTransaction();
             try {
@@ -357,10 +368,18 @@ class ChallanController extends Controller
                 $challanMst->save();
 
                 foreach ($normalizedItems as $i => $item) {
+                    $wDecomp = $calc->decomposeWeights($item['grossWeight'], $item['stoneWeight'], $item['purityKarat']);
+
                     tbl_challan_details::create([
                         'no' => $i + 1,
                         'qty' => $item['qty'],
                         'weight_grams' => $item['lineWeight'],
+                        'gross_weight' => $wDecomp['gross_weight'],
+                        'stone_weight' => $wDecomp['stone_weight'],
+                        'net_weight' => $wDecomp['net_weight'],
+                        'purity_karat' => $wDecomp['purity_karat'],
+                        'fine_weight' => $wDecomp['fine_weight'],
+                        'tag_number' => $item['tagNumber'],
                         'qty_unit' => $item['unit'],
                         'challan_mst_id' => $challanMst->challan_mst_id,
                         'challan_type' => $item['categoryId'],
@@ -452,10 +471,22 @@ class ChallanController extends Controller
                     $allocated += $lineWeight;
                 }
 
+                $grossW = (float) ($allData[$i]['grossWeight'] ?? $lineWeight);
+                $stoneW = (float) ($allData[$i]['stoneWeight'] ?? 0);
+                $purityK = $allData[$i]['purityKarat'] ?? '22K';
+                $tagNo = $allData[$i]['tagNumber'] ?? null;
+                $wDecomp = $calc->decomposeWeights($grossW, $stoneW, $purityK);
+
                 tbl_challan_details::create([
                     'no' => $i + 1,
                     'qty' => $qty,
                     'weight_grams' => $lineWeight,
+                    'gross_weight' => $wDecomp['gross_weight'],
+                    'stone_weight' => $wDecomp['stone_weight'],
+                    'net_weight' => $wDecomp['net_weight'],
+                    'purity_karat' => $wDecomp['purity_karat'],
+                    'fine_weight' => $wDecomp['fine_weight'],
+                    'tag_number' => $tagNo,
                     'qty_unit' => $qtyUnit,
                     'challan_mst_id' => $challanMst->challan_mst_id,
                     'challan_type' => $sellCategoryId,

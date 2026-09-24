@@ -24,6 +24,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\KarigarController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\AppSettingsController;
+use App\Http\Controllers\JewelleryInventoryController;
 
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 
@@ -35,6 +36,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/stock/quality/{sellQualityId}', [StockController::class, 'qualityBalance']);
     Route::get('/stock/ledger', [StockController::class, 'ledger'])
         ->middleware(['role:admin,worker', 'permission:stock']);
+
+    Route::middleware('role:admin,worker')->prefix('inventory')->group(function () {
+        Route::post('/calculate', [JewelleryInventoryController::class, 'calculate']);
+        Route::get('/tags/{tagNumber}', [JewelleryInventoryController::class, 'findTag']);
+        Route::post('/exchange', [JewelleryInventoryController::class, 'recordExchange'])->middleware('permission:sales');
+
+        Route::middleware('permission:stock')->group(function () {
+            Route::get('/valuation', [JewelleryInventoryController::class, 'valuation']);
+            Route::get('/tags', [JewelleryInventoryController::class, 'tags']);
+            Route::post('/tags', [JewelleryInventoryController::class, 'storeTag']);
+            Route::post('/opening-stock', [JewelleryInventoryController::class, 'recordOpeningStock']);
+            Route::post('/adjustment', [JewelleryInventoryController::class, 'recordAdjustment']);
+        });
+    });
 
     Route::middleware('role:admin')->group(function () {
         Route::get('/users/workers', [UserController::class, 'workers']);
