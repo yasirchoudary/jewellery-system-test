@@ -10,6 +10,7 @@ class tbl_vendor extends Model
     use HasFactory;
 
     protected $primaryKey = "vendor_id";
+    protected $guarded = [];
 
     public function setVendorCompanyNameAttribute($value){
         $value = preg_replace('/\s+/', ' ', $value);

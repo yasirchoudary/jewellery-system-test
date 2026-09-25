@@ -9,10 +9,8 @@ class tbl_broker extends Model
 {
     use HasFactory;
     protected $table = "tbl_brokers";
-    protected $fillable = [
-        'broker_name',
-        'broker_contact_no'
-    ];
+    protected $primaryKey = "broker_id";
+    protected $guarded = [];
 
     public function setBrokerNameAttribute($value){
         $value = preg_replace('/\s+/', ' ', $value);

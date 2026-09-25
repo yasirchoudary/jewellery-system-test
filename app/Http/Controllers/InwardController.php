@@ -142,6 +142,7 @@ class InwardController extends Controller
             $weights = $calc->decomposeWeights($gross, $stone, $purity);
 
             $inward_detail = new tbl_inward_details();
+            $inward_detail->inward_quality_id = (int) $request->input('inward_quality_id', $itemTypeId);
             $inward_detail->sell_quality_id = $itemTypeId;
             $inward_detail->metal_type = $metalType;
             $inward_detail->weight_grams = $weights['net_weight'];

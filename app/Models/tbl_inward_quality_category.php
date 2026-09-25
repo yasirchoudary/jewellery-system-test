@@ -9,4 +9,6 @@ class tbl_inward_quality_category extends Model
 {
     use HasFactory;
     protected $table = 'tbl_inward_quality_categories';
+    protected $primaryKey = 'inward_quality_category_id';
+    protected $guarded = [];
 }

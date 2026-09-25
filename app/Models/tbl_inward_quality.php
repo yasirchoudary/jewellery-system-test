@@ -9,10 +9,8 @@ class tbl_inward_quality extends Model
 {
     use HasFactory;
     protected $table = "tbl_inward_qualities";
-    protected $fillable = [
-        'quality_name',
-        'inward_quality_category_id'
-    ];
+    protected $primaryKey = "inward_quality_id";
+    protected $guarded = [];
 
     public function setQualityNameAttribute($value){
         $value = preg_replace('/\s+/', ' ', $value);
