@@ -52,6 +52,22 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        <div class="col-md-3">
+                                            <div class="small-box bg-info">
+                                                <div class="inner">
+                                                    <h3>{{ fineGoldTotal }}<sup style="font-size:14px">g</sup></h3>
+                                                    <p>Fine Gold Equivalent</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="small-box bg-success">
+                                                <div class="inner">
+                                                    <h3>Rs. {{ totalStockValue }}</h3>
+                                                    <p>Est. Inventory Value</p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <h5 class="mt-2">{{ $t('stock.byItemType') }}</h5>
@@ -86,8 +102,13 @@
                                                 <th>{{ $t('common.date') }}</th>
                                                 <th>{{ $t('common.metal') }}</th>
                                                 <th>{{ $t('stock.item') }}</th>
+                                                <th>Tag / Barcode</th>
                                                 <th>{{ $t('common.type') }}</th>
-                                                <th class="text-right">{{ $t('common.weightG') }}</th>
+                                                <th class="text-right">Gross (g)</th>
+                                                <th class="text-right">Stone (g)</th>
+                                                <th class="text-right">Net Wt (g)</th>
+                                                <th class="text-center">Karat</th>
+                                                <th class="text-right">Fine Gold (g)</th>
                                                 <th class="text-right">{{ $t('common.pieces') }}</th>
                                                 <th class="text-right">{{ $t('common.rateG') }}</th>
                                                 <th class="text-right">{{ $t('common.amount') }}</th>
@@ -99,15 +120,20 @@
                                                 <td>{{ formatDate(row.created_at) }}</td>
                                                 <td>{{ $label(row.metal_type) }}</td>
                                                 <td>{{ row.item ? $label(row.item.quality_name) : '-' }}</td>
+                                                <td><span class="badge badge-light" v-if="row.tag_number">{{ row.tag_number }}</span><span v-else>-</span></td>
                                                 <td>{{ $label(row.transaction_type) }}</td>
-                                                <td class="text-right">{{ row.weight_grams }}</td>
+                                                <td class="text-right">{{ row.gross_weight > 0 ? row.gross_weight : row.weight_grams }}</td>
+                                                <td class="text-right">{{ row.stone_weight > 0 ? row.stone_weight : '0.000' }}</td>
+                                                <td class="text-right font-weight-bold">{{ row.net_weight > 0 ? row.net_weight : row.weight_grams }}</td>
+                                                <td class="text-center"><span class="badge badge-secondary">{{ row.purity_karat ? row.purity_karat + 'K' : '22K' }}</span></td>
+                                                <td class="text-right text-success font-weight-bold">{{ row.fine_weight > 0 ? row.fine_weight : (row.weight_grams * 22 / 24).toFixed(3) }}</td>
                                                 <td class="text-right">{{ row.quantity_pieces }}</td>
                                                 <td class="text-right">{{ row.rate_per_gram || '-' }}</td>
                                                 <td class="text-right">{{ row.amount || '-' }}</td>
                                                 <td class="text-right">{{ row.balance_weight_after }}</td>
                                             </tr>
                                             <tr v-if="!ledger.data || ledger.data.length === 0">
-                                                <td colspan="9" class="text-center text-muted">{{ $t('stock.noMovements') }}</td>
+                                                <td colspan="14" class="text-center text-muted">{{ $t('stock.noMovements') }}</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -134,12 +160,25 @@ export default {
             ledger: { data: [] },
             balances: { gold: '0.000', silver: '0.000' },
             byQuality: [],
+            valuation: null,
             filters: {
                 metal_type: '',
                 transaction_type: '',
                 paginate: 20,
             },
         };
+    },
+    computed: {
+        fineGoldTotal() {
+            const gold = parseFloat(this.balances.gold || 0);
+            return (gold * (22 / 24)).toFixed(3);
+        },
+        totalStockValue() {
+            if (this.valuation && this.valuation.total_inventory_cost_value) {
+                return Number(this.valuation.total_inventory_cost_value).toLocaleString();
+            }
+            return '0';
+        }
     },
     mounted() {
         this.loadBalances();
@@ -152,6 +191,11 @@ export default {
                 this.balances.silver = parseFloat(res.data.silver?.total_weight_grams || 0).toFixed(3);
                 this.byQuality = (res.data.by_quality || []).filter((row) => row.weight_grams > 0 || row.pieces > 0);
             });
+            axios.get('/api/inventory/valuation').then((res) => {
+                if (res.data && res.data.summary) {
+                    this.valuation = res.data.summary;
+                }
+            }).catch(() => {});
         },
         loadLedger(page = 1) {
             const params = new URLSearchParams({

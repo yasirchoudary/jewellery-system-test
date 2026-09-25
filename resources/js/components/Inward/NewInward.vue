@@ -177,16 +177,31 @@
                         </model-select>
                       </div>
                     </div>
+                    <!-- Weight & Purity Decomposition Section -->
                     <div
                       class="form-group"
                       style="display: flex; flex-direction: row"
                     >
                       <div class="col-md-2">
-                        <label for="weightGrams" class="col-form-label text-md"
-                          >{{ $t('purchase.weightGrams') }}
-                          <span class="required-mark" style="color: red"
-                            >*</span
-                          ></label
+                        <label for="grossWeight" class="col-form-label text-md"
+                          >Gross Wt (g)
+                          <span class="required-mark" style="color: red">*</span>
+                        </label>
+                      </div>
+                      <div class="col-md-3">
+                        <input
+                          type="number"
+                          step="0.001"
+                          class="form-control font-weight-bold"
+                          v-model="grossWeight"
+                          @input="onWeightDecompChange"
+                          placeholder="e.g. 10.500"
+                        />
+                      </div>
+                      <div class="col-md-1"></div>
+                      <div class="col-md-2">
+                        <label for="stoneWeight" class="col-form-label text-md"
+                          >Stone Wt (g)</label
                         >
                       </div>
                       <div class="col-md-3">
@@ -194,11 +209,101 @@
                           type="number"
                           step="0.001"
                           class="form-control"
+                          v-model="stoneWeight"
+                          @input="onWeightDecompChange"
+                          placeholder="0.000"
+                        />
+                      </div>
+                    </div>
+
+                    <div
+                      class="form-group"
+                      style="display: flex; flex-direction: row"
+                    >
+                      <div class="col-md-2">
+                        <label for="weightGrams" class="col-form-label text-md"
+                          >Net Metal Wt (g)
+                          <span class="required-mark" style="color: red">*</span>
+                        </label>
+                      </div>
+                      <div class="col-md-3">
+                        <input
+                          type="number"
+                          step="0.001"
+                          class="form-control bg-light font-weight-bold"
                           v-model="weightGrams"
-                          :placeholder="$t('purchase.phWeight')"
+                          @input="calcTotalAmount"
+                          placeholder="Auto: Gross - Stone"
                         />
                       </div>
                       <div class="col-md-1"></div>
+                      <div class="col-md-2">
+                        <label for="purityKarat" class="col-form-label text-md"
+                          >Purity / Karat
+                          <span class="required-mark" style="color: red">*</span>
+                        </label>
+                      </div>
+                      <div class="col-md-3">
+                        <select
+                          class="form-control"
+                          v-model="purityKarat"
+                          @change="onWeightDecompChange"
+                        >
+                          <option value="24K">24K (99.9%)</option>
+                          <option value="22K">22K (91.6% Standard)</option>
+                          <option value="21K">21K (87.5%)</option>
+                          <option value="20K">20K (83.3%)</option>
+                          <option value="18K">18K (75.0%)</option>
+                          <option value="14K">14K (58.5%)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div
+                      class="form-group"
+                      style="display: flex; flex-direction: row"
+                    >
+                      <div class="col-md-2">
+                        <label class="col-form-label text-md"
+                          >Fine Gold (g)</label
+                        >
+                      </div>
+                      <div class="col-md-3">
+                        <input
+                          type="text"
+                          class="form-control bg-light text-success font-weight-bold"
+                          v-model="fineWeight"
+                          disabled
+                        />
+                      </div>
+                      <div class="col-md-1"></div>
+                      <div class="col-md-2">
+                        <label for="tagNumber" class="col-form-label text-md"
+                          >Tag / Barcode #</label
+                        >
+                      </div>
+                      <div class="col-md-3" style="display: flex; gap: 5px;">
+                        <input
+                          type="text"
+                          class="form-control"
+                          v-model="tagNumber"
+                          placeholder="e.g. TAG-1001"
+                        />
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary btn-sm"
+                          @click="generateTag"
+                          title="Generate Unique Tag"
+                        >
+                          Gen
+                        </button>
+                      </div>
+                    </div>
+
+                    <div
+                      class="form-group"
+                      style="display: flex; flex-direction: row"
+                    >
                       <div class="col-md-2">
                         <label for="quantity" class="col-form-label text-md"
                           >{{ $t('purchase.pieces') }}
@@ -216,7 +321,7 @@
                           :placeholder="$t('purchase.phQty')"
                         />
                       </div>
-                    </div>
+                      <div class="col-md-1"></div>
                     <div
                       class="form-group"
                       style="display: flex; flex-direction: row"
@@ -380,6 +485,11 @@ export default {
       unit: "pcs",
       quantity: "1",
       weightGrams: "",
+      grossWeight: "",
+      stoneWeight: "0",
+      purityKarat: "22K",
+      fineWeight: "0.000",
+      tagNumber: "",
       metalType: "gold",
       rate: "",
       gstPercentage: "0",
@@ -696,6 +806,21 @@ export default {
       }
     },
 
+    generateTag() {
+      this.tagNumber = 'TAG-' + Math.floor(100000 + Math.random() * 900000);
+    },
+
+    onWeightDecompChange() {
+      const gross = parseFloat(this.grossWeight) || 0;
+      const stone = parseFloat(this.stoneWeight) || 0;
+      const net = Math.max(0, gross - stone);
+      this.weightGrams = net > 0 ? net.toFixed(3) : '';
+      const karatMap = { '24K': 24, '22K': 22, '21K': 21, '20K': 20, '18K': 18, '14K': 14 };
+      const karat = karatMap[this.purityKarat] || 22;
+      this.fineWeight = ((net * karat) / 24).toFixed(3);
+      this.calcTotalAmount();
+    },
+
     //Function or Watcher is to calculate GST amount based on the Total Amount and and GST Percentage
     calcGstAmount: function () {
       if (this.gstPercentage == "0" || this.totalAmount == "") {
@@ -737,6 +862,10 @@ export default {
         addData["itemTypeId"] = this.selectedProductQuality;
         addData["metalType"] = this.metalType;
         addData["weightGrams"] = this.weightGrams;
+        addData["grossWeight"] = this.grossWeight || this.weightGrams;
+        addData["stoneWeight"] = this.stoneWeight || 0;
+        addData["purityKarat"] = this.purityKarat || '22K';
+        addData["tagNumber"] = this.tagNumber || null;
         addData["unit"] = this.unit || "pcs";
         addData["quantity"] = this.quantity || 1;
         addData["rate"] = this.rate;
