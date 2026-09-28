@@ -54,8 +54,8 @@ class SellQualityController extends Controller
 
     public function insertSellQuality(Request $request){
         $validated = validator($request->all(),[
-            'qualityCategoryId' => 'required | numeric | between:1,3',
-            'qualityName' => 'required | regex:/[a-zA-Z0-9\s]+/ | max:50'
+            'qualityCategoryId' => 'required|numeric|exists:tbl_sell_quality_categories,sell_quality_category_id',
+            'qualityName' => 'required|regex:/[a-zA-Z0-9\s]+/|max:50'
         ]);
 
         if($validated->fails()){
@@ -136,8 +136,8 @@ class SellQualityController extends Controller
 
     public function updateSellQuality(Request $request, $sellQualityId){
         $validated = validator($request->all(),[
-            'editQualityCategoryId' => 'required | numeric | between:1,3',
-            'editQualityName' => 'required | regex:/[a-zA-Z0-9\s]+/ | max:50'
+            'editQualityCategoryId' => 'required|numeric|exists:tbl_sell_quality_categories,sell_quality_category_id',
+            'editQualityName' => 'required|regex:/[a-zA-Z0-9\s]+/|max:50'
         ]);
 
         if($validated->fails()){
