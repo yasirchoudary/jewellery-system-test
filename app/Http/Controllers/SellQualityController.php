@@ -11,7 +11,10 @@ use Illuminate\Database\QueryException;
 class SellQualityController extends Controller
 {
     public function getQualityCategories(){
-        $qualityCategoryQuery = DB::table('tbl_sell_quality_categories')->where('sell_quality_category_status','=',1)->get()->toArray();
+        $qualityCategoryQuery = DB::table('tbl_sell_quality_categories')
+            ->where('sell_quality_category_status','=',1)
+            ->whereNotIn(DB::raw('LOWER(sell_category_name)'), ['roll', 'beam', 'grey'])
+            ->get()->toArray();
 
         $response = array();
         foreach ($qualityCategoryQuery as $qualityCategories){

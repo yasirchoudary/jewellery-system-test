@@ -123,6 +123,9 @@
             ({{ addStock.available_piece_weights_label }})
           </span>
         </p>
+        <p class="text-danger small mb-2" v-if="addStock && !addHasStock" role="alert">
+          {{ $t('karigar.noStockItem') }}
+        </p>
         <div class="mb-3" v-if="addWeightOptions.length">
           <span class="small text-muted mr-2">{{ $t('karigar.pickWeights') }}</span>
           <button
@@ -140,7 +143,7 @@
         <div class="form-group row">
           <label class="col-md-2 col-form-label">{{ $t('karigar.weightPc') }} <span style="color:red">*</span></label>
           <div class="col-md-2">
-            <input type="number" step="0.001" min="0.001" class="form-control text-right" v-model="addForm.weightPerPiece">
+            <input type="number" step="0.001" min="0.001" class="form-control text-right" v-model="addForm.weightPerPiece" :disabled="!addHasStock">
           </div>
           <label class="col-md-2 col-form-label">{{ $t('common.pieces') }} <span style="color:red">*</span></label>
           <div class="col-md-2">
@@ -150,6 +153,7 @@
               :max="addMaxPieces || undefined"
               class="form-control text-right"
               v-model.number="addForm.issuedPieces"
+              :disabled="!addHasStock || addMaxPieces < 1"
             >
           </div>
           <label class="col-md-2 col-form-label">{{ $t('karigar.extraTotal') }}</label>
@@ -165,7 +169,7 @@
         </div>
       </div>
       <div class="card-footer">
-        <button class="btn btn-success" @click="submitAddOutward">{{ $t('karigar.btnSaveExtra') }}</button>
+        <button class="btn btn-success" @click="submitAddOutward" :disabled="!addHasStock || addMaxPieces < 1 || Number(addForm.issuedPieces) > addMaxPieces">{{ $t('karigar.btnSaveExtra') }}</button>
         <button class="btn btn-secondary ml-2" @click="addOutwardJob = null">{{ $t('common.cancel') }}</button>
       </div>
     </div>
@@ -368,6 +372,14 @@ export default {
       return Object.keys(counts)
         .map(k => ({ weight: parseFloat(k), count: counts[k] }))
         .sort((a, b) => a.weight - b.weight);
+    },
+    addHasStock() {
+      return !!(
+        this.addStock &&
+        Number(this.addStock.pieces) > 0 &&
+        Array.isArray(this.addStock.available_piece_weights) &&
+        this.addStock.available_piece_weights.length > 0
+      );
     },
     addMaxPieces() {
       if (!this.addStock || !this.addForm.weightPerPiece) {
@@ -602,18 +614,18 @@ export default {
         toastr.info(this.$t('karigar.selectItemStock'));
         return;
       }
+      if (!this.addHasStock) {
+        toastr.error(this.$t('karigar.noStockItem'));
+        return;
+      }
       const per = parseFloat(this.addForm.weightPerPiece || 0);
       const pcs = parseInt(this.addForm.issuedPieces || 0, 10);
       if (!(per > 0) || !(pcs > 0)) {
         toastr.info(this.$t('karigar.weightPiecesRequired'));
         return;
       }
-      if (this.addMaxPieces > 0 && pcs > this.addMaxPieces) {
+      if (this.addMaxPieces < 1 || pcs > this.addMaxPieces) {
         toastr.error(this.$t('karigar.onlyPieces', { n: this.addMaxPieces, weight: per }));
-        return;
-      }
-      if (this.addStock && parseFloat(this.addStock.weight_grams || 0) <= 0) {
-        toastr.error(this.$t('karigar.noStockItem'));
         return;
       }
       const total = Math.round(per * pcs * 1000) / 1000;

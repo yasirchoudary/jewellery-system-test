@@ -20,6 +20,12 @@ class tbl_challan_details extends Model
         'challan_type',
         'sell_quality_id',
         'sell_category_id',
+        'gross_weight',
+        'stone_weight',
+        'net_weight',
+        'purity_karat',
+        'fine_weight',
+        'tag_number',
         'challan_details_status',
     ];
 

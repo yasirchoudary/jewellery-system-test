@@ -228,7 +228,11 @@ class InwardController extends Controller
 
         /*Apply sort field to below column data and by
         default set the sort field to inward_mst_date*/
-        if(!in_array($sort_field, ['inward_mst_id','inward_mst_date'])){
+        $sort_columns = [
+            'inward_mst_id' => 'tbl_inward_msts.inward_mst_id',
+            'inward_mst_date' => 'tbl_inward_msts.inward_mst_date',
+        ];
+        if (!isset($sort_columns[$sort_field])) {
             $sort_field = 'inward_mst_date';
         }
 
@@ -266,7 +270,7 @@ class InwardController extends Controller
         ->when($brokerId, function($query) use ($brokerId) {
             $query->where('tbl_inward_msts.inward_mst_broker_id', $brokerId);
         })
-        ->orderBy($sort_field, $sort_direction)    
+        ->orderBy($sort_columns[$sort_field], $sort_direction)
         ->paginate($paginate));
     }
 

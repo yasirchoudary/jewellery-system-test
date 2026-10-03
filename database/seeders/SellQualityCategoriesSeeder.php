@@ -16,13 +16,14 @@ class SellQualityCategoriesSeeder extends Seeder
     {
         DB::table('tbl_sell_quality_categories')->insert([
             [
-                'sell_category_name' => 'Grey'
+                'sell_category_name' => 'Gold Items',
+                'metal_type' => 'gold',
+                'sell_quality_category_status' => 1
             ],
             [
-                'sell_category_name' => 'Beam'
-            ],
-            [
-                'sell_category_name' => 'Roll'
+                'sell_category_name' => 'Silver (Chandi) Items',
+                'metal_type' => 'silver',
+                'sell_quality_category_status' => 1
             ],
         ]);
     }

@@ -57,6 +57,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/users/workers/{userId}/permissions', [UserController::class, 'updatePermissions']);
         Route::get('/audit-logs', [AuditLogController::class, 'index']);
         Route::put('/settings', [AppSettingsController::class, 'update']);
+        Route::post('/clear-user-data', function () {
+            $report = \App\Services\DataCleanupService::clearUserData();
+            return response()->json([
+                'success' => true,
+                'message' => 'All user-entered data entries have been successfully cleared.',
+                'report' => $report,
+            ]);
+        });
     });
 
     Route::get('/settings', [AppSettingsController::class, 'show'])->middleware('role:admin,worker');
